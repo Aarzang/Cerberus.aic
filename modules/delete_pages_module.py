@@ -23,8 +23,8 @@ class DeletePagesModule(AbstractModule):
     async def find_new_critical_pages(self):
         for page in self.get_critical_rate_pages():
             await self.prepare_page(page)
-        # for page in self.get_old_pages():
-        #     await self.prepare_page(page)
+        for page in self.get_old_pages():
+             await self.prepare_old_page(page)
 
     async def prepare_page(self, page: Page):
         if self.validate_page(page):
@@ -36,6 +36,14 @@ class DeletePagesModule(AbstractModule):
 
             await self.post_comment(page)
 
+    async def prepare_old_page(self, page: Page):
+        if self.validate_page(page):
+            log.debug(f"Find page: {page.title}")
+
+            tags = page.tags
+            tags.append(self.config["old_tag"])
+            page.set_tags(tags)
+    
     @staticmethod
     def _get_date_of_for_delete(page: Page) -> datetime:
         try:
@@ -69,10 +77,10 @@ class DeletePagesModule(AbstractModule):
     def get_old_pages(self) -> Iterator[Page]:
         for page in self.wiki.list_pages(
             category=" ".join(self.config["category"]),
-            tags=f"{' '.join(self.config['tags'])} -{self.config['deletes_tag']}",
+            tags=f"{' '.join(self.config['tags'])} -{self.config['old_tag']}",
             rating=f"<{self.config['week']['rate']}"
         ):
-            if (arrow.now() - arrow.get(page.created, "YYYY-MM-DD HH:mm:ss")).days >= self.config["week"]["days"]:
+            if (arrow.now() - arrow.get(page.created, "YYYY-MM-DD HH:mm:ss")).days >= self.config["month"]["days"]:
                 yield page
 
     async def post_comment(self, page: Page):
